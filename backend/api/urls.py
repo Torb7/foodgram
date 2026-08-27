@@ -1,5 +1,7 @@
-from django.urls import path
+from django.urls import path, include
 
 from api import views
 
-urlpatterns = []
+urlpatterns = [
+    path('auth/', include('djoser.urls.authtoken')),
+]
