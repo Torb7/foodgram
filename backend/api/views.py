@@ -1,9 +1,15 @@
 from django.db.models import OuterRef, Exists
-from rest_framework import viewsets, mixins
+from rest_framework import viewsets, mixins, status
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 
 from users.models import User
-from .serializers import UserSerializer, UserCreateSerializer
+from .serializers import (
+    UserSerializer,
+    UserCreateSerializer,
+    SetPasswordSerializer,
+)
 
 
 class UserViewSet(
@@ -33,3 +39,13 @@ class UserViewSet(
         following = self.request.user.following.filter(pk=OuterRef('pk'))
 
         return User.objects.annotate(is_subscribed=Exists(following))
+
+    @action(detail=False, methods=['post'])
+    def set_password(self, request):
+        serializer = SetPasswordSerializer(
+            data=request.data, context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
