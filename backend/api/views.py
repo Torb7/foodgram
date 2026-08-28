@@ -9,6 +9,7 @@ from .serializers import (
     UserSerializer,
     UserCreateSerializer,
     SetPasswordSerializer,
+    AvatarSerializer,
 )
 
 
@@ -55,3 +56,17 @@ class UserViewSet(
         serializer = self.get_serializer(request.user)
 
         return Response(serializer.data)
+
+    @action(detail=False, methods=['put', 'delete'], url_path='me/avatar')
+    def avatar(self, request):
+        if request.method == 'PUT':
+            serializer = AvatarSerializer(request.user, data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+
+            return Response(serializer.data)
+
+        else:
+            request.user.avatar.delete(save=True)
+
+            return Response(status=status.HTTP_204_NO_CONTENT)
