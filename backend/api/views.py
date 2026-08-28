@@ -49,3 +49,9 @@ class UserViewSet(
         serializer.save()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False)
+    def me(self, request):
+        serializer = self.get_serializer(request.user)
+
+        return Response(serializer.data)
