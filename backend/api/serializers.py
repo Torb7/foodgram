@@ -88,3 +88,45 @@ class RecipeMinifiedSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = ('id', 'name', 'image', 'cooking_time')
+
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    recipes = serializers.SerializerMethodField()
+    is_subscribed = serializers.BooleanField(read_only=True)
+    recipes_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = (
+            'id',
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'avatar',
+            'is_subscribed',
+            'recipes',
+            'recipes_count',
+        )
+
+    def get_recipes(self, user):
+        recipes_limit = self.context['request'].query_params.get(
+            'recipes_limit'
+        )
+
+        if recipes_limit is not None:
+            try:
+                recipes_limit = int(recipes_limit)
+            except ValueError:
+                raise serializers.ValidationError(
+                    {'recipes_limit': 'Должно быть целым числом.'}
+                )
+
+            if recipes_limit < 0:
+                raise serializers.ValidationError(
+                    {'recipes_limit': 'Должно быть неотрицательным числом.'}
+                )
+
+        queryset = user.recipes.all()[:recipes_limit]
+
+        return RecipeMinifiedSerializer(queryset, many=True).data

@@ -1,4 +1,4 @@
-from django.db.models import OuterRef, Exists
+from django.db.models import Count, OuterRef, Exists, Value
 from rest_framework import viewsets, mixins, status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
@@ -10,6 +10,7 @@ from .serializers import (
     UserCreateSerializer,
     SetPasswordSerializer,
     AvatarSerializer,
+    SubscriptionSerializer,
 )
 
 
@@ -70,3 +71,20 @@ class UserViewSet(
             request.user.avatar.delete(save=True)
 
             return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False)
+    def subscriptions(self, request):
+        queryset = (
+            request.user.following.all()
+            .prefetch_related('recipes')
+            .annotate(
+                recipes_count=Count('recipes'), is_subscribed=Value(True)
+            )
+        )
+        page = self.paginate_queryset(queryset)
+
+        serializer = SubscriptionSerializer(
+            page, many=True, context={'request': request}
+        )
+
+        return self.get_paginated_response(serializer.data)
