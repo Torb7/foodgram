@@ -48,6 +48,8 @@ class User(AbstractUser):
 
     following = models.ManyToManyField(
         'self',
+        through='Follow',
+        through_fields=('user', 'following'),
         symmetrical=False,
         blank=True,
         related_name='followers',
@@ -64,3 +66,23 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+
+class Follow(models.Model):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='following_relations'
+    )
+    following = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='followers_relations'
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=('user', 'following'), name='unique_follow'
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(user__exact=models.F('following')),
+                name='follow_not_self',
+            ),
+        ]
