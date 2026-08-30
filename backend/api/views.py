@@ -1,5 +1,6 @@
 from django.db.models import Count, OuterRef, Exists, Value
-from rest_framework import viewsets, mixins, status
+from django.shortcuts import get_object_or_404
+from rest_framework import viewsets, mixins, status, serializers
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -88,3 +89,42 @@ class UserViewSet(
         )
 
         return self.get_paginated_response(serializer.data)
+
+    @action(detail=True, methods=['post', 'delete'])
+    def subscribe(self, request, pk):
+        following = get_object_or_404(
+            self.get_queryset()
+            .prefetch_related('recipes')
+            .annotate(recipes_count=Count('recipes')),
+            pk=pk,
+        )
+
+        if request.method == 'POST':
+
+            if following == request.user:
+                raise serializers.ValidationError(
+                    'Нельзя подписаться на самого себя.'
+                )
+
+            if following.is_subscribed:
+                raise serializers.ValidationError(
+                    'Вы уже подписаны на этого пользователя.'
+                )
+
+            request.user.following.add(following)
+            following.is_subscribed = True
+
+            serializer = SubscriptionSerializer(
+                following, context={'request': request}
+            )
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        else:
+            if not following.is_subscribed:
+                raise serializers.ValidationError(
+                    'Вы не подписаны на этого пользователя.'
+                )
+
+            request.user.following.remove(following)
+
+            return Response(status=status.HTTP_204_NO_CONTENT)
