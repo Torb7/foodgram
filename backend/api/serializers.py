@@ -4,7 +4,7 @@ from django.core.files.base import ContentFile
 from rest_framework import serializers
 
 from users.models import User
-from recipes.models import Recipe
+from recipes.models import Recipe, Tag
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -130,3 +130,10 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         queryset = user.recipes.all()[:recipes_limit]
 
         return RecipeMinifiedSerializer(queryset, many=True).data
+
+
+class TagSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Tag
+        fields = ('id', 'name', 'slug')

@@ -6,12 +6,14 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from users.models import User
+from recipes.models import Tag
 from .serializers import (
     UserSerializer,
     UserCreateSerializer,
     SetPasswordSerializer,
     AvatarSerializer,
     SubscriptionSerializer,
+    TagSerializer,
 )
 
 
@@ -128,3 +130,14 @@ class UserViewSet(
             request.user.following.remove(following)
 
             return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class TagViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
+    """Управление тегами рецептов."""
+
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer
+    permission_classes = (AllowAny,)
+    pagination_class = None
