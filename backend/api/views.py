@@ -2,11 +2,12 @@ from django.db.models import Count, OuterRef, Exists, Value
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, mixins, status, serializers
 from rest_framework.decorators import action
+from rest_framework.filters import SearchFilter
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from recipes.models import Tag, Ingredient
 from users.models import User
-from recipes.models import Tag
 from .serializers import (
     UserSerializer,
     UserCreateSerializer,
@@ -14,6 +15,7 @@ from .serializers import (
     AvatarSerializer,
     SubscriptionSerializer,
     TagSerializer,
+    IngredientSerializer,
 )
 
 
@@ -141,3 +143,16 @@ class TagViewSet(
     serializer_class = TagSerializer
     permission_classes = (AllowAny,)
     pagination_class = None
+
+
+class IngredientViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
+    """Управление ингредиентами рецептов."""
+
+    queryset = Ingredient.objects.all()
+    serializer_class = IngredientSerializer
+    permission_classes = (AllowAny,)
+    pagination_class = None
+    filter_backends = (SearchFilter,)
+    search_fields = ('^name',)
