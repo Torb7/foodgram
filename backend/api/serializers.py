@@ -188,3 +188,88 @@ class RecipeSerializer(serializers.ModelSerializer):
         obj.author.is_subscribed = getattr(obj, 'is_subscribed', False)
 
         return UserSerializer(obj.author).data
+
+
+class IngredientAmountSerializer(serializers.Serializer):
+    id = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
+    amount = serializers.IntegerField(min_value=1)
+
+
+class RecipeCreateSerializer(serializers.ModelSerializer):
+    image = Base64ImageField(required=False)
+    tags = serializers.PrimaryKeyRelatedField(
+        queryset=Tag.objects.all(), many=True, allow_empty=False
+    )
+    ingredients = IngredientAmountSerializer(many=True, allow_empty=False)
+    author = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), default=serializers.CurrentUserDefault()
+    )
+
+    class Meta:
+        model = Recipe
+        fields = (
+            'name',
+            'text',
+            'cooking_time',
+            'image',
+            'author',
+            'ingredients',
+            'tags',
+        )
+
+    def validate(self, attrs):
+        if self.instance is None and 'image' not in attrs:
+            raise serializers.ValidationError(
+                {'image': 'Изображение обязательно.'}
+            )
+
+        return attrs
+
+    def create(self, validated_data):
+        tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('ingredients')
+
+        recipe = Recipe.objects.create(**validated_data)
+
+        recipe.tags.set(tags)
+
+        RecipeIngredients.objects.bulk_create(
+            RecipeIngredients(
+                recipe=recipe,
+                ingredient=ingredient['id'],
+                amount=ingredient['amount'],
+            )
+            for ingredient in ingredients
+        )
+
+        return recipe
+
+    def update(self, instance, validated_data):
+        tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('ingredients')
+
+        recipe = super().update(instance, validated_data)
+
+        recipe.tags.set(tags)
+
+        recipe.recipe_ingredients.all().delete()
+
+        RecipeIngredients.objects.bulk_create(
+            RecipeIngredients(
+                recipe=recipe,
+                ingredient=ingredient['id'],
+                amount=ingredient['amount'],
+            )
+            for ingredient in ingredients
+        )
+
+        return recipe
+
+    def to_representation(self, instance):
+        queryset = (
+            Recipe.objects.select_related('author')
+            .prefetch_related('tags', 'recipe_ingredients__ingredient')
+            .get(pk=instance.pk)
+        )
+
+        return RecipeSerializer(queryset).data
