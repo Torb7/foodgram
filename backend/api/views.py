@@ -1,5 +1,6 @@
-from django.db.models import Count, OuterRef, Exists, Value
+from django.db.models import Count, OuterRef, Exists, Value, Sum
 from django_filters.rest_framework import DjangoFilterBackend
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, mixins, status, serializers
 from rest_framework.decorators import action
@@ -7,10 +8,11 @@ from rest_framework.filters import SearchFilter
 from rest_framework.permissions import (
     AllowAny,
     IsAuthenticatedOrReadOnly,
+    IsAuthenticated,
 )
 from rest_framework.response import Response
 
-from recipes.models import Tag, Ingredient, Recipe
+from recipes.models import Tag, Ingredient, Recipe, RecipeIngredients
 from users.models import User
 from .filters import RecipeFilter
 from .permissions import IsAuthorOrReadOnly
@@ -232,3 +234,31 @@ class RecipeViewSet(viewsets.ModelViewSet):
             request.user.favorite_recipes.remove(recipe)
 
             return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, permission_classes=[IsAuthenticated])
+    def download_shopping_cart(self, request):
+        ingredients = (
+            RecipeIngredients.objects.filter(
+                recipe__in=request.user.shopping_cart.all()
+            )
+            .values('ingredient__name', 'ingredient__measurement_unit')
+            .annotate(amount=Sum('amount'))
+            .order_by('ingredient__name')
+        )
+
+        shopping_list = '\n'.join(
+            f'{item["ingredient__name"]}: '
+            f'{item["amount"]}'
+            f'{item["ingredient__measurement_unit"]}.'
+            for item in ingredients
+        )
+
+        response = HttpResponse(
+            shopping_list,
+            content_type='text/plain; charset=utf-8',
+        )
+        response['Content-Disposition'] = (
+            'attachment; filename="shopping_list.txt"'
+        )
+
+        return response
