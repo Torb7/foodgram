@@ -24,6 +24,7 @@ from .serializers import (
     IngredientSerializer,
     RecipeSerializer,
     RecipeCreateSerializer,
+    RecipeMinifiedSerializer,
 )
 
 
@@ -207,3 +208,27 @@ class RecipeViewSet(viewsets.ModelViewSet):
         kwargs['partial'] = False
 
         return self.update(request, *args, **kwargs)
+
+    @action(detail=True, methods=['post', 'delete'])
+    def favorite(self, request, pk):
+        recipe = get_object_or_404(Recipe, pk=pk)
+
+        if request.method == 'POST':
+
+            if recipe.in_favorites.filter(pk=request.user.pk).exists():
+                raise serializers.ValidationError(
+                    'Рецепт уже есть в избранном.'
+                )
+
+            request.user.favorite_recipes.add(recipe)
+
+            serializer = RecipeMinifiedSerializer(recipe)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        else:
+            if not recipe.in_favorites.filter(pk=request.user.pk).exists():
+                raise serializers.ValidationError('Рецепта нет в избранном.')
+
+            request.user.favorite_recipes.remove(recipe)
+
+            return Response(status=status.HTTP_204_NO_CONTENT)
