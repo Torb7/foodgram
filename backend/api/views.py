@@ -1,7 +1,9 @@
+from django.db import IntegrityError
 from django.db.models import Count, OuterRef, Exists, Value, Sum
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from nanoid import generate
 from rest_framework import viewsets, mixins, status, serializers
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
@@ -292,3 +294,20 @@ class RecipeViewSet(viewsets.ModelViewSet):
             recipe.in_shopping_cart.remove(request.user)
 
             return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, url_path='get-link')
+    def get_short_link(self, request, pk):
+        recipe = get_object_or_404(Recipe, pk=pk)
+
+        if recipe.short_code is None:
+            while True:
+                try:
+                    recipe.short_code = generate(size=5)
+                    recipe.save(update_fields=['short_code'])
+                    break
+                except IntegrityError:
+                    continue
+
+        short_link = request.build_absolute_uri(f'/s/{recipe.short_code}/')
+
+        return Response({'short-link': short_link})
