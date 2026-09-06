@@ -262,3 +262,33 @@ class RecipeViewSet(viewsets.ModelViewSet):
         )
 
         return response
+
+    @action(
+        detail=True,
+        methods=['post', 'delete'],
+        permission_classes=[IsAuthenticated],
+    )
+    def shopping_cart(self, request, pk):
+        recipe = get_object_or_404(Recipe, pk=pk)
+
+        if request.method == 'POST':
+
+            if recipe.in_shopping_cart.filter(pk=request.user.pk).exists():
+                raise serializers.ValidationError(
+                    'Рецепт уже есть в списке покупок.'
+                )
+
+            recipe.in_shopping_cart.add(request.user)
+
+            serializer = RecipeMinifiedSerializer(recipe)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        else:
+            if not recipe.in_shopping_cart.filter(pk=request.user.pk).exists():
+                raise serializers.ValidationError(
+                    'Рецепт нет в списке покупок.'
+                )
+
+            recipe.in_shopping_cart.remove(request.user)
+
+            return Response(status=status.HTTP_204_NO_CONTENT)
