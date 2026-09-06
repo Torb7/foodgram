@@ -4,7 +4,7 @@ from django.core.files.base import ContentFile
 from rest_framework import serializers
 
 from users.models import User
-from recipes.models import Recipe, Tag, Ingredient
+from recipes.models import Recipe, Tag, Ingredient, RecipeIngredients
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -144,3 +144,47 @@ class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ingredient
         fields = ('id', 'name', 'measurement_unit')
+
+
+class RecipeIngredientsSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='ingredient.id')
+    name = serializers.CharField(source='ingredient.name')
+    measurement_unit = serializers.CharField(
+        source='ingredient.measurement_unit'
+    )
+
+    class Meta:
+        model = RecipeIngredients
+        fields = ('id', 'name', 'measurement_unit', 'amount')
+
+
+class RecipeSerializer(serializers.ModelSerializer):
+    is_favorited = serializers.BooleanField(read_only=True, default=False)
+    is_in_shopping_cart = serializers.BooleanField(
+        read_only=True, default=False
+    )
+    author = serializers.SerializerMethodField()
+    tags = TagSerializer(many=True)
+    ingredients = RecipeIngredientsSerializer(
+        many=True, source='recipe_ingredients'
+    )
+
+    class Meta:
+        model = Recipe
+        fields = (
+            'id',
+            'name',
+            'text',
+            'cooking_time',
+            'image',
+            'is_favorited',
+            'is_in_shopping_cart',
+            'author',
+            'ingredients',
+            'tags',
+        )
+
+    def get_author(self, obj):
+        obj.author.is_subscribed = getattr(obj, 'is_subscribed', False)
+
+        return UserSerializer(obj.author).data
