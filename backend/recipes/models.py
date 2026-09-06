@@ -89,3 +89,23 @@ class Recipe(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class RecipeIngredients(models.Model):
+    """Модель ингредиентов рецепта"""
+
+    recipe = models.ForeignKey(
+        Recipe, on_delete=models.CASCADE, related_name='recipe_ingredients'
+    )
+
+    ingredient = models.ForeignKey(
+        Ingredient, on_delete=models.CASCADE, related_name='ingredient_recipes'
+    )
+
+    amount = models.PositiveSmallIntegerField(
+        'Количество ингредиента', validators=(MinValueValidator(1),)
+    )
+
+    class Meta:
+        verbose_name = 'Ингредиент рецепта'
+        verbose_name_plural = 'Ингредиенты рецепта'
