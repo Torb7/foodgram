@@ -1,13 +1,19 @@
 from django.db.models import Count, OuterRef, Exists, Value
+from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, mixins, status, serializers
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import (
+    AllowAny,
+    IsAuthenticatedOrReadOnly,
+)
 from rest_framework.response import Response
 
-from recipes.models import Tag, Ingredient
+from recipes.models import Tag, Ingredient, Recipe
 from users.models import User
+from .filters import RecipeFilter
+from .permissions import IsAuthorOrReadOnly
 from .serializers import (
     UserSerializer,
     UserCreateSerializer,
@@ -16,6 +22,8 @@ from .serializers import (
     SubscriptionSerializer,
     TagSerializer,
     IngredientSerializer,
+    RecipeSerializer,
+    RecipeCreateSerializer,
 )
 
 
@@ -156,3 +164,46 @@ class IngredientViewSet(
     pagination_class = None
     filter_backends = (SearchFilter,)
     search_fields = ('^name',)
+
+
+class RecipeViewSet(viewsets.ModelViewSet):
+    """Управление рецептами."""
+
+    serializer_class = RecipeSerializer
+    permission_classes = (IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = RecipeFilter
+    http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
+
+    def get_serializer_class(self):
+        if self.action in ('list', 'retrieve'):
+            return RecipeSerializer
+
+        return RecipeCreateSerializer
+
+    def get_queryset(self):
+        queryset = Recipe.objects.select_related('author').prefetch_related(
+            'tags', 'recipe_ingredients__ingredient'
+        )
+
+        if not self.request.user.is_authenticated:
+            return queryset
+
+        favorite_recipes = self.request.user.favorite_recipes.filter(
+            pk=OuterRef('pk')
+        )
+        shopping_cart = self.request.user.shopping_cart.filter(
+            pk=OuterRef('pk')
+        )
+        following = self.request.user.following.filter(pk=OuterRef('author'))
+
+        return queryset.annotate(
+            is_favorited=Exists(favorite_recipes),
+            is_in_shopping_cart=Exists(shopping_cart),
+            is_subscribed=Exists(following),
+        )
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = False
+
+        return self.update(request, *args, **kwargs)
