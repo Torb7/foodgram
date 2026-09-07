@@ -99,7 +99,10 @@ class RecipeIngredients(models.Model):
     )
 
     ingredient = models.ForeignKey(
-        Ingredient, on_delete=models.CASCADE, related_name='ingredient_recipes'
+        Ingredient,
+        on_delete=models.CASCADE,
+        related_name='ingredient_recipes',
+        verbose_name='Ингредиент',
     )
 
     amount = models.PositiveSmallIntegerField(
@@ -116,3 +119,6 @@ class RecipeIngredients(models.Model):
                 name='unique_recipe_ingredient',
             ),
         ]
+
+    def __str__(self):
+        return self.recipe.name
