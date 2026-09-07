@@ -217,6 +217,24 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             'tags',
         )
 
+    def validate_tags(self, value):
+        if len(value) != len(set(value)):
+            raise serializers.ValidationError(
+                'Теги не могут быть одинаковыми.'
+            )
+
+        return value
+
+    def validate_ingredients(self, value):
+        ingredients = [item['id'] for item in value]
+
+        if len(ingredients) != len(set(ingredients)):
+            raise serializers.ValidationError(
+                'Ингредиенты не могут быть одинаковыми.'
+            )
+
+        return value
+
     def validate(self, attrs):
         if self.instance is None and 'image' not in attrs:
             raise serializers.ValidationError(
