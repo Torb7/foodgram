@@ -6,7 +6,6 @@ from django.shortcuts import get_object_or_404, redirect
 from nanoid import generate
 from rest_framework import viewsets, mixins, status, serializers
 from rest_framework.decorators import action
-from rest_framework.filters import SearchFilter
 from rest_framework.permissions import (
     AllowAny,
     IsAuthenticatedOrReadOnly,
@@ -16,7 +15,7 @@ from rest_framework.response import Response
 
 from recipes.models import Tag, Ingredient, Recipe, RecipeIngredients
 from users.models import User
-from .filters import RecipeFilter
+from .filters import RecipeFilter, IngredientSearchFilter
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (
     UserSerializer,
@@ -167,7 +166,7 @@ class IngredientViewSet(
     serializer_class = IngredientSerializer
     permission_classes = (AllowAny,)
     pagination_class = None
-    filter_backends = (SearchFilter,)
+    filter_backends = (IngredientSearchFilter,)
     search_fields = ('^name',)
 
 
