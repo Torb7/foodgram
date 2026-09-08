@@ -21,7 +21,7 @@ class RecipeFilter(filters.FilterSet):
         tags = self.request.query_params.getlist('tags')
 
         for tag in tags:
-            return queryset.filter(tags__slug=tag)
+            queryset = queryset.filter(tags__slug=tag)
 
         return queryset.distinct()
 
