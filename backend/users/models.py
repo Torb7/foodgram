@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
 
+from recipes.models import Recipe
 from recipes.constants import (
     MAX_LENGTH_USERNAME,
     MAX_LENGTH_EMAIL,
@@ -34,6 +35,7 @@ class User(AbstractUser):
 
     favorite_recipes = models.ManyToManyField(
         'recipes.Recipe',
+        through='Favorites',
         blank=True,
         related_name='in_favorites',
         verbose_name='Избранное',
@@ -41,6 +43,7 @@ class User(AbstractUser):
 
     shopping_cart = models.ManyToManyField(
         'recipes.Recipe',
+        through='ShoppingCart',
         blank=True,
         related_name='in_shopping_cart',
         verbose_name='Список покупок',
@@ -95,3 +98,61 @@ class Follow(models.Model):
 
     def __str__(self):
         return 'Подписан на'
+
+
+class Favorites(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='favorites_user',
+        verbose_name='Пользователь',
+    )
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        related_name='favorites_recipe',
+        verbose_name='Рецепт',
+    )
+
+    class Meta:
+        verbose_name = 'Избранный рецепт'
+        verbose_name_plural = 'Избранные рецепты'
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=('user', 'recipe'), name='unique_favorites'
+            )
+        ]
+
+    def __str__(self):
+        return f'Рецепт в избранном у {self.user.email}'
+
+
+class ShoppingCart(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='shopping_cart_user',
+        verbose_name='Пользователь',
+    )
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        related_name='shopping_cart_recipe',
+        verbose_name='Рецепт',
+    )
+
+    class Meta:
+        verbose_name = 'Корзина покупок'
+        verbose_name_plural = 'Корзина покупок'
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=('user', 'recipe'), name='unique_shopping_cart'
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f'Рецепт в корзине покупок у {self.user.email}'
+        )
