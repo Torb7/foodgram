@@ -15,11 +15,14 @@ class Command(BaseCommand):
             ingredients = json.load(file)
 
         Ingredient.objects.bulk_create(
-            Ingredient(
-                name=ingredient['name'],
-                measurement_unit=ingredient['measurement_unit'],
-            )
-            for ingredient in ingredients
+            (
+                Ingredient(
+                    name=ingredient['name'],
+                    measurement_unit=ingredient['measurement_unit'],
+                )
+                for ingredient in ingredients
+            ),
+            ignore_conflicts=True,
         )
 
         self.stdout.write(
