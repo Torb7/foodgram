@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
 
@@ -9,6 +9,10 @@ from .constants import (
     MAX_LENGTH_INGREDIENT_NAME,
     MAX_LENGTH_INGREDIENT_MEASUREMENT,
     MAX_LENGTH_RECIPE_NAME,
+    MIN_COOKING_TIME,
+    MAX_COOKING_TIME,
+    MIN_AMOUNT_INGREDIENT,
+    MAX_AMOUNT_INGREDIENT,
 )
 
 
@@ -62,7 +66,11 @@ class Recipe(models.Model):
     text = models.TextField('Описание')
 
     cooking_time = models.PositiveSmallIntegerField(
-        'Время приготовления', validators=(MinValueValidator(1),)
+        'Время приготовления',
+        validators=(
+            MinValueValidator(MIN_COOKING_TIME),
+            MaxValueValidator(MAX_COOKING_TIME),
+        ),
     )
 
     image = models.ImageField(upload_to='recipes/images/')
@@ -112,7 +120,11 @@ class RecipeIngredients(models.Model):
     )
 
     amount = models.PositiveSmallIntegerField(
-        'Количество ингредиента', validators=(MinValueValidator(1),)
+        'Количество ингредиента',
+        validators=(
+            MinValueValidator(MIN_AMOUNT_INGREDIENT),
+            MaxValueValidator(MAX_AMOUNT_INGREDIENT),
+        ),
     )
 
     class Meta:
