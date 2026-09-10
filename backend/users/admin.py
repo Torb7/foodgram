@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .models import Follow
+from .models import Follow, Favorites, ShoppingCart
 
 User = get_user_model()
 
@@ -13,19 +13,41 @@ class FollowsInline(admin.TabularInline):
     extra = 0
 
 
+class FavoritesInline(admin.TabularInline):
+    model = Favorites
+    fk_name = 'user'
+    extra = 0
+
+
+class ShoppingCartInline(admin.TabularInline):
+    model = ShoppingCart
+    fk_name = 'user'
+    extra = 0
+
+
 @admin.register(User)
-class CustomUserAdmin(BaseUserAdmin):
+class UserAdmin(BaseUserAdmin):
     list_display = ('username', 'email')
     search_fields = ('username', 'email')
-    filter_horizontal = ('favorite_recipes', 'shopping_cart')
-    inlines = (FollowsInline,)
+    inlines = (FollowsInline, FavoritesInline, ShoppingCartInline)
 
 
-BaseUserAdmin.fieldsets += (  # type: ignore[operator]
-    (
-        'Связанные объекты',
-        {'fields': ('favorite_recipes', 'shopping_cart')},
-    ),
-)
+@admin.register(Follow)
+class FollowAdmin(admin.ModelAdmin):
+    list_display = ('user', 'following')
+    search_fields = ('user', 'following')
+
+
+@admin.register(Favorites)
+class FavoritesAdmin(admin.ModelAdmin):
+    list_display = ('user', 'recipe')
+    search_fields = ('user', 'recipe')
+
+
+@admin.register(ShoppingCart)
+class ShoppingCartAdmin(admin.ModelAdmin):
+    list_display = ('user', 'recipe')
+    search_fields = ('user', 'recipe')
+
 
 admin.site.empty_value_display = 'Не задано'
