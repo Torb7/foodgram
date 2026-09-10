@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 from django.db.models import Count, OuterRef, Exists, Value, Sum
 from django_filters.rest_framework import DjangoFilterBackend
@@ -14,7 +15,6 @@ from rest_framework.permissions import (
 from rest_framework.response import Response
 
 from recipes.models import Tag, Ingredient, Recipe, RecipeIngredients
-from users.models import User
 from .filters import RecipeFilter, IngredientSearchFilter
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (
@@ -29,6 +29,8 @@ from .serializers import (
     RecipeCreateSerializer,
     RecipeMinifiedSerializer,
 )
+
+User = get_user_model()
 
 
 class UserViewSet(
