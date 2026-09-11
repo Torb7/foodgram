@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django.db import models
+from django.db import models, IntegrityError, transaction
+from nanoid import generate
 
 
 from .constants import (
@@ -79,9 +80,7 @@ class Recipe(models.Model):
         auto_now_add=True, verbose_name='Дата и время публикации'
     )
 
-    short_code = models.CharField(
-        max_length=5, unique=True, null=True, editable=False
-    )
+    short_code = models.CharField(max_length=5, unique=True, editable=False)
 
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -100,6 +99,20 @@ class Recipe(models.Model):
         default_related_name = 'recipes'
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
+
+    def save(self, *args, **kwargs):
+        while not self.short_code:
+            self.short_code = generate(size=5)
+
+            try:
+                with transaction.atomic():
+                    super().save(*args, **kwargs)
+                    return
+
+            except IntegrityError:
+                self.short_code = None
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
