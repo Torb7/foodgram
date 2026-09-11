@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Count, OuterRef, Exists, Value, Sum
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, mixins, status, serializers
 from rest_framework.decorators import action
 from rest_framework.permissions import (
@@ -301,11 +301,3 @@ class RecipeViewSet(viewsets.ModelViewSet):
         short_link = request.build_absolute_uri(f'/s/{recipe.short_code}/')
 
         return Response({'short-link': short_link})
-
-
-def short_link_redirect(request, short_code):
-    """Перенаправление c короткой ссылки на эндпоинт рецепта."""
-
-    recipe = get_object_or_404(Recipe, short_code=short_code)
-
-    return redirect(f'/recipes/{recipe.id}/')
