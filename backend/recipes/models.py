@@ -3,6 +3,8 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models, IntegrityError, transaction
 from nanoid import generate
 
+from .managers import RecipeQuerySet
+
 
 from .constants import (
     MAX_LENGTH_TAG_NAME,
@@ -93,6 +95,8 @@ class Recipe(models.Model):
     )
 
     tags = models.ManyToManyField(Tag, verbose_name='Теги')
+
+    objects = RecipeQuerySet.as_manager()
 
     class Meta:
         ordering = ('-created_at',)

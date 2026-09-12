@@ -170,19 +170,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if not self.request.user.is_authenticated:
             return queryset
 
-        favorite_recipes = self.request.user.favorite_recipes.filter(
-            pk=OuterRef('pk')
-        )
-        shopping_cart = self.request.user.shopping_cart.filter(
-            pk=OuterRef('pk')
-        )
-        following = self.request.user.following.filter(pk=OuterRef('author'))
-
-        return queryset.annotate(
-            is_favorited=Exists(favorite_recipes),
-            is_in_shopping_cart=Exists(shopping_cart),
-            is_subscribed=Exists(following),
-        )
+        return queryset.user_annotations(self.request.user)
 
     def partial_update(self, request, *args, **kwargs):
         kwargs['partial'] = False
