@@ -201,14 +201,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
         recipe.tags.set(tags)
 
-        RecipeIngredients.objects.bulk_create(
-            RecipeIngredients(
-                recipe=recipe,
-                ingredient=ingredient['ingredient'],
-                amount=ingredient['amount'],
-            )
-            for ingredient in ingredients
-        )
+        self.bulk_create_ingredients(recipe, ingredients)
 
         return recipe
 
@@ -221,16 +214,12 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
         recipe.tags.set(tags)
 
+        # recipe.recipe_ingredients.clear() - AttributeError: 'RelatedManager'
+        # object has no attribute 'clear'
+        # Видимо clear нельзя использовать для своих промежуточных моделей
         recipe.recipe_ingredients.all().delete()
 
-        RecipeIngredients.objects.bulk_create(
-            RecipeIngredients(
-                recipe=recipe,
-                ingredient=ingredient['ingredient'],
-                amount=ingredient['amount'],
-            )
-            for ingredient in ingredients
-        )
+        self.bulk_create_ingredients(recipe, ingredients)
 
         return recipe
 
@@ -242,3 +231,13 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         )
 
         return RecipeSerializer(queryset).data
+
+    def bulk_create_ingredients(self, recipe, ingredients):
+        RecipeIngredients.objects.bulk_create(
+            RecipeIngredients(
+                recipe=recipe,
+                ingredient=ingredient['ingredient'],
+                amount=ingredient['amount'],
+            )
+            for ingredient in ingredients
+        )
