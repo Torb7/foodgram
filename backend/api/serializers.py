@@ -95,10 +95,12 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 
 class RecipeIngredientsSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(source='ingredient.id')
-    name = serializers.CharField(source='ingredient.name')
+    id = serializers.PrimaryKeyRelatedField(
+        source='ingredient', queryset=Ingredient.objects.all()
+    )
+    name = serializers.CharField(source='ingredient.name', read_only=True)
     measurement_unit = serializers.CharField(
-        source='ingredient.measurement_unit'
+        source='ingredient.measurement_unit', read_only=True
     )
 
     class Meta:
@@ -138,17 +140,12 @@ class RecipeSerializer(serializers.ModelSerializer):
         return UserSerializer(obj.author).data
 
 
-class IngredientAmountSerializer(serializers.Serializer):
-    id = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
-    amount = serializers.IntegerField(min_value=1)
-
-
 class RecipeCreateSerializer(serializers.ModelSerializer):
     image = Base64ImageField(required=False)
     tags = serializers.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(), many=True, allow_empty=False
     )
-    ingredients = IngredientAmountSerializer(many=True, allow_empty=False)
+    ingredients = RecipeIngredientsSerializer(many=True, allow_empty=False)
     author = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
     class Meta:
@@ -172,7 +169,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return value
 
     def validate_ingredients(self, value):
-        ingredients = [item['id'] for item in value]
+        ingredients = [item['ingredient'].id for item in value]
 
         if len(ingredients) != len(set(ingredients)):
             raise serializers.ValidationError(
@@ -200,7 +197,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         RecipeIngredients.objects.bulk_create(
             RecipeIngredients(
                 recipe=recipe,
-                ingredient=ingredient['id'],
+                ingredient=ingredient['ingredient'],
                 amount=ingredient['amount'],
             )
             for ingredient in ingredients
@@ -221,7 +218,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         RecipeIngredients.objects.bulk_create(
             RecipeIngredients(
                 recipe=recipe,
-                ingredient=ingredient['id'],
+                ingredient=ingredient['ingredient'],
                 amount=ingredient['amount'],
             )
             for ingredient in ingredients
