@@ -4,7 +4,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet as DjoserUserViewSet
-from rest_framework import viewsets, mixins, status, serializers
+from rest_framework import viewsets, status, serializers
 from rest_framework.decorators import action
 from rest_framework.permissions import (
     AllowAny,
@@ -127,9 +127,7 @@ class UserViewSet(DjoserUserViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class TagViewSet(
-    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
-):
+class TagViewSet(viewsets.ReadOnlyModelViewSet):
     """Управление тегами рецептов."""
 
     queryset = Tag.objects.all()
@@ -138,9 +136,7 @@ class TagViewSet(
     pagination_class = None
 
 
-class IngredientViewSet(
-    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
-):
+class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     """Управление ингредиентами рецептов."""
 
     queryset = Ingredient.objects.all()
