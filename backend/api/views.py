@@ -46,22 +46,22 @@ class UserViewSet(DjoserUserViewSet):
 
     @action(
         detail=False,
-        methods=['put', 'delete'],
+        methods=['put'],
         permission_classes=[IsAuthenticated],
         url_path='me/avatar',
     )
     def avatar(self, request):
-        if request.method == 'PUT':
-            serializer = AvatarSerializer(request.user, data=request.data)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
+        serializer = AvatarSerializer(request.user, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
 
-            return Response(serializer.data)
+        return Response(serializer.data)
 
-        else:
-            request.user.avatar.delete(save=True)
+    @avatar.mapping.delete
+    def avatar_delete(self, request):
+        request.user.avatar.delete(save=True)
 
-            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, permission_classes=[IsAuthenticated])
     def subscriptions(self, request):
@@ -81,47 +81,51 @@ class UserViewSet(DjoserUserViewSet):
         return self.get_paginated_response(serializer.data)
 
     @action(
-        detail=True,
-        methods=['post', 'delete'],
-        permission_classes=[IsAuthenticated],
+        detail=True, methods=['post'], permission_classes=[IsAuthenticated]
     )
-    def subscribe(self, request, pk):
+    def subscribe(self, request, id):
         following = get_object_or_404(
             self.get_queryset()
             .prefetch_related('recipes')
             .annotate(recipes_count=Count('recipes')),
-            pk=pk,
+            pk=id,
         )
 
-        if request.method == 'POST':
-
-            if following == request.user:
-                raise serializers.ValidationError(
-                    'Нельзя подписаться на самого себя.'
-                )
-
-            if following.is_subscribed:
-                raise serializers.ValidationError(
-                    'Вы уже подписаны на этого пользователя.'
-                )
-
-            request.user.following.add(following)
-            following.is_subscribed = True
-
-            serializer = SubscriptionSerializer(
-                following, context={'request': request}
+        if following == request.user:
+            raise serializers.ValidationError(
+                'Нельзя подписаться на самого себя.'
             )
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        else:
-            if not following.is_subscribed:
-                raise serializers.ValidationError(
-                    'Вы не подписаны на этого пользователя.'
-                )
+        if following.is_subscribed:
+            raise serializers.ValidationError(
+                'Вы уже подписаны на этого пользователя.'
+            )
 
-            request.user.following.remove(following)
+        request.user.following.add(following)
+        following.is_subscribed = True
 
-            return Response(status=status.HTTP_204_NO_CONTENT)
+        serializer = SubscriptionSerializer(
+            following, context={'request': request}
+        )
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @subscribe.mapping.delete
+    def subscribe_delete(self, request, id):
+        following = get_object_or_404(
+            self.get_queryset()
+            .prefetch_related('recipes')
+            .annotate(recipes_count=Count('recipes')),
+            pk=id,
+        )
+
+        if not following.is_subscribed:
+            raise serializers.ValidationError(
+                'Вы не подписаны на этого пользователя.'
+            )
+
+        request.user.following.remove(following)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class TagViewSet(
@@ -190,29 +194,28 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         return self.update(request, *args, **kwargs)
 
-    @action(detail=True, methods=['post', 'delete'])
+    @action(detail=True, methods=['post'])
     def favorite(self, request, pk):
         recipe = get_object_or_404(Recipe, pk=pk)
 
-        if request.method == 'POST':
+        if recipe.in_favorites.filter(pk=request.user.pk).exists():
+            raise serializers.ValidationError('Рецепт уже есть в избранном.')
 
-            if recipe.in_favorites.filter(pk=request.user.pk).exists():
-                raise serializers.ValidationError(
-                    'Рецепт уже есть в избранном.'
-                )
+        request.user.favorite_recipes.add(recipe)
 
-            request.user.favorite_recipes.add(recipe)
+        serializer = RecipeMinifiedSerializer(recipe)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-            serializer = RecipeMinifiedSerializer(recipe)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+    @favorite.mapping.delete
+    def favorite_delete(self, request, pk):
+        recipe = get_object_or_404(Recipe, pk=pk)
 
-        else:
-            if not recipe.in_favorites.filter(pk=request.user.pk).exists():
-                raise serializers.ValidationError('Рецепта нет в избранном.')
+        if not recipe.in_favorites.filter(pk=request.user.pk).exists():
+            raise serializers.ValidationError('Рецепта нет в избранном.')
 
-            request.user.favorite_recipes.remove(recipe)
+        request.user.favorite_recipes.remove(recipe)
 
-            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, permission_classes=[IsAuthenticated])
     def download_shopping_cart(self, request):
@@ -243,34 +246,31 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return response
 
     @action(
-        detail=True,
-        methods=['post', 'delete'],
-        permission_classes=[IsAuthenticated],
+        detail=True, methods=['post'], permission_classes=[IsAuthenticated]
     )
     def shopping_cart(self, request, pk):
         recipe = get_object_or_404(Recipe, pk=pk)
 
-        if request.method == 'POST':
+        if recipe.in_shopping_cart.filter(pk=request.user.pk).exists():
+            raise serializers.ValidationError(
+                'Рецепт уже есть в списке покупок.'
+            )
 
-            if recipe.in_shopping_cart.filter(pk=request.user.pk).exists():
-                raise serializers.ValidationError(
-                    'Рецепт уже есть в списке покупок.'
-                )
+        recipe.in_shopping_cart.add(request.user)
 
-            recipe.in_shopping_cart.add(request.user)
+        serializer = RecipeMinifiedSerializer(recipe)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-            serializer = RecipeMinifiedSerializer(recipe)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+    @shopping_cart.mapping.delete
+    def shopping_cart_delete_recipe(self, request, pk):
+        recipe = get_object_or_404(Recipe, pk=pk)
 
-        else:
-            if not recipe.in_shopping_cart.filter(pk=request.user.pk).exists():
-                raise serializers.ValidationError(
-                    'Рецепт нет в списке покупок.'
-                )
+        if not recipe.in_shopping_cart.filter(pk=request.user.pk).exists():
+            raise serializers.ValidationError('Рецепта нет в списке покупок.')
 
-            recipe.in_shopping_cart.remove(request.user)
+        recipe.in_shopping_cart.remove(request.user)
 
-            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, url_path='get-link')
     def get_short_link(self, request, pk):
