@@ -160,6 +160,11 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             'tags',
         )
 
+    # Не понимаю тут твоих замечаний: поля tags, ingredients имеют по умолчанию
+    # required=True, зачем дублировать работу DRF в методе validate? А вот поле
+    # image имеет required=False, потому, что при PATCH запросе поле не
+    # обязательное, а при POST обязательное и я его не могу валидировать в
+    # методе validate_image.
     def validate_tags(self, value):
         if len(value) != len(set(value)):
             raise serializers.ValidationError(
