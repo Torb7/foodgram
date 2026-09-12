@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db.transaction import atomic
 from rest_framework import serializers
 
 from recipes.models import Recipe, Tag, Ingredient, RecipeIngredients
@@ -191,6 +192,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    @atomic
     def create(self, validated_data):
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('ingredients')
@@ -210,6 +212,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
         return recipe
 
+    @atomic
     def update(self, instance, validated_data):
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('ingredients')
