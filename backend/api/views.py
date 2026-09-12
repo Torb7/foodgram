@@ -14,6 +14,7 @@ from rest_framework.permissions import (
 from rest_framework.response import Response
 
 from recipes.models import Tag, Ingredient, Recipe, RecipeIngredients
+from users.models import Follow, Favorites, ShoppingCart
 from .filters import RecipeFilter, IngredientSearchFilter
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (
@@ -96,12 +97,14 @@ class UserViewSet(DjoserUserViewSet):
                 'Нельзя подписаться на самого себя.'
             )
 
-        if following.is_subscribed:
+        _, created = Follow.objects.get_or_create(
+            user=request.user, following=following
+        )
+        if not created:
             raise serializers.ValidationError(
                 'Вы уже подписаны на этого пользователя.'
             )
 
-        request.user.following.add(following)
         following.is_subscribed = True
 
         serializer = SubscriptionSerializer(
@@ -111,19 +114,15 @@ class UserViewSet(DjoserUserViewSet):
 
     @subscribe.mapping.delete
     def subscribe_delete(self, request, id):
-        following = get_object_or_404(
-            self.get_queryset()
-            .prefetch_related('recipes')
-            .annotate(recipes_count=Count('recipes')),
-            pk=id,
-        )
+        following = get_object_or_404(User.objects.all(), pk=id)
 
-        if not following.is_subscribed:
+        deleted_count, _ = Follow.objects.filter(
+            user=request.user, following=following
+        ).delete()
+        if not deleted_count:
             raise serializers.ValidationError(
                 'Вы не подписаны на этого пользователя.'
             )
-
-        request.user.following.remove(following)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -194,28 +193,34 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         return self.update(request, *args, **kwargs)
 
-    @action(detail=True, methods=['post'])
-    def favorite(self, request, pk):
+    def add_to(self, model, user, pk, place):
         recipe = get_object_or_404(Recipe, pk=pk)
 
-        if recipe.in_favorites.filter(pk=request.user.pk).exists():
-            raise serializers.ValidationError('Рецепт уже есть в избранном.')
-
-        request.user.favorite_recipes.add(recipe)
+        _, created = model.objects.get_or_create(user=user, recipe=recipe)
+        if not created:
+            raise serializers.ValidationError(f'Рецепт уже есть в {place}.')
 
         serializer = RecipeMinifiedSerializer(recipe)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @favorite.mapping.delete
-    def favorite_delete(self, request, pk):
+    def remove_from(self, model, user, pk, place):
         recipe = get_object_or_404(Recipe, pk=pk)
 
-        if not recipe.in_favorites.filter(pk=request.user.pk).exists():
-            raise serializers.ValidationError('Рецепта нет в избранном.')
-
-        request.user.favorite_recipes.remove(recipe)
+        deleted_count, _ = model.objects.filter(
+            user=user, recipe=recipe
+        ).delete()
+        if not deleted_count:
+            raise serializers.ValidationError(f'Рецепта нет в {place}.')
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['post'])
+    def favorite(self, request, pk):
+        return self.add_to(Favorites, request.user, pk, 'избранном')
+
+    @favorite.mapping.delete
+    def favorite_delete(self, request, pk):
+        return self.remove_from(Favorites, request.user, pk, 'избранном')
 
     @action(detail=False, permission_classes=[IsAuthenticated])
     def download_shopping_cart(self, request):
@@ -249,28 +254,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
         detail=True, methods=['post'], permission_classes=[IsAuthenticated]
     )
     def shopping_cart(self, request, pk):
-        recipe = get_object_or_404(Recipe, pk=pk)
-
-        if recipe.in_shopping_cart.filter(pk=request.user.pk).exists():
-            raise serializers.ValidationError(
-                'Рецепт уже есть в списке покупок.'
-            )
-
-        recipe.in_shopping_cart.add(request.user)
-
-        serializer = RecipeMinifiedSerializer(recipe)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return self.add_to(ShoppingCart, request.user, pk, 'списке покупок')
 
     @shopping_cart.mapping.delete
     def shopping_cart_delete_recipe(self, request, pk):
-        recipe = get_object_or_404(Recipe, pk=pk)
-
-        if not recipe.in_shopping_cart.filter(pk=request.user.pk).exists():
-            raise serializers.ValidationError('Рецепта нет в списке покупок.')
-
-        recipe.in_shopping_cart.remove(request.user)
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return self.remove_from(
+            ShoppingCart, request.user, pk, 'списке покупок'
+        )
 
     @action(detail=True, url_path='get-link')
     def get_short_link(self, request, pk):
