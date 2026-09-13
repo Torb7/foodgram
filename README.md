@@ -1,77 +1,123 @@
 # Foodgram
 
-Foodgram — сервис для публикации рецептов. Пользователи могут создавать и
-редактировать рецепты, подписываться на авторов, добавлять рецепты в избранное
-и список покупок, а затем скачивать сводный список ингредиентов.
+Foodgram — сервис публикации рецептов. Пользователи создают рецепты с
+ингредиентами и тегами, подписываются на авторов, добавляют рецепты в
+избранное и список покупок, а затем скачивают общий список ингредиентов.
 
-Проект состоит из React-клиента и Django REST API. Описание HTTP-интерфейса
-находится в [OpenAPI-спецификации](docs/openapi-schema.yml).
+Технический контракт API описан в
+[OpenAPI-спецификации](docs/openapi-schema.yml).
 
 ## Возможности
 
-- регистрация, вход по токену и изменение пароля;
-- профили пользователей, аватары и подписки;
-- рецепты с тегами, изображениями и ингредиентами;
-- фильтрация рецептов по автору, тегам, избранному и корзине;
-- избранное и список покупок;
-- скачивание списка покупок в TXT;
+- регистрация, аутентификация по токену и смена пароля;
+- профили, аватары и подписки на авторов;
+- создание, редактирование и удаление рецептов;
+- теги, ингредиенты и поиск ингредиентов по началу названия;
+- фильтрация рецептов, избранное и список покупок;
+- скачивание списка покупок в формате TXT;
 - короткие ссылки на рецепты.
 
-## Технологии
+## Стек
 
-- Python 3
-- Django
-- Django REST Framework
-- django-filter
-- PostgreSQL
-- Djoser
-- React 17
+- Python 3.12;
+- Django 5.2 и Django REST Framework 3.16;
+- Djoser и django-filter;
+- PostgreSQL 14;
+- React 17;
+- Docker, Docker Compose и nginx.
+
+## Структура репозитория
+
+```text
+backend/              Django-проект и приложения api, recipes, users
+frontend/             React-клиент
+data/                 исходные данные ингредиентов
+docs/                 OpenAPI-спецификация и страница ReDoc
+infra/                отдельная конфигурация nginx для frontend и ReDoc
+nginx/                nginx-образ для Docker-конфигураций в корне
+postman_collection/   коллекция запросов Postman
+```
 
 ## Локальный запуск API
 
-Требуются Python 3.10+ и Node.js 18+.
+Нужен Python 3.12 или совместимый с зависимостями Python 3.10+.
+Текущая конфигурация Django для локального запуска использует SQLite.
 
 ```bash
 git clone <URL-репозитория>
 cd foodgram
+
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
-cd backend
+pip install -r backend/requirements.txt
+
 export DEBUG=True
-python manage.py migrate
-python manage.py load_ingredients
-python manage.py runserver
+python backend/manage.py migrate
+python backend/manage.py load_ingredients
+python backend/manage.py runserver
 ```
 
-API будет доступен по адресу <http://127.0.0.1:8000/api/>.
+API станет доступен по адресу <http://127.0.0.1:8000/api/>.
 
-Команда `load_ingredients` загружает данные из
-[`data/ingredients.json`](data/ingredients.json). Она не защищена от
-повторного запуска и добавит дубликаты ингредиентов, поэтому запускайте её
-только для пустой базы.
+`load_ingredients` загружает ингредиенты из
+[`data/ingredients.json`](data/ingredients.json). Его следует выполнить после
+миграций, чтобы поиск и создание рецептов могли использовать исходный набор
+ингредиентов.
 
-### Переменные окружения backend
+### Переменные окружения
 
-Настройки читаются из переменных окружения процесса (файл `.env` сам по себе
-не загружается):
+Настройки Django читаются из окружения процесса. При прямом запуске файл
+`.env` автоматически не загружается, поэтому переменные нужно экспортировать
+в оболочке или передать через используемый инструмент запуска.
 
 | Переменная | Назначение | Значение по умолчанию |
 | --- | --- | --- |
-| `SECRET_KEY` | секретный ключ Django | случайный ключ на каждый запуск |
-| `DEBUG` | режим отладки (`True` или `False`) | `False` |
-| `ALLOWED_HOSTS` | допустимые хосты через запятую | `localhost,127.0.0.1` |
+| `SECRET_KEY` | секретный ключ Django | новый случайный ключ на запуск |
+| `DEBUG` | режим отладки | `False` |
+| `ALLOWED_HOSTS` | допустимые хосты, через запятую | `localhost,127.0.0.1` |
+| `CSRF_TRUSTED_ORIGINS` | доверенные источники CSRF, через запятую | `http://localhost:8000` |
 
-Для production обязательно задайте постоянный `SECRET_KEY`, `DEBUG=False` и
-точный список `ALLOWED_HOSTS`.
+## Запуск ReDoc из `infra`
 
-## API и документация
+Этот способ предназначен для просмотра frontend-сборки и API-документации.
+Он **не запускает Django API**: для API используйте инструкцию выше или
+отдельную конфигурацию развёртывания.
+
+Требуются Docker Engine и Docker Compose; порт `80` должен быть свободен.
+Из корня репозитория выполните:
+
+```bash
+cd infra
+docker compose up --build
+```
+
+Если используется устаревший отдельный бинарник Compose, команда аналогична:
+
+```bash
+docker-compose up --build
+```
+
+После сборки откройте <http://localhost/api/docs/>. Контейнер `frontend`
+соберёт React-приложение и завершится — это ожидаемое поведение. Контейнер
+nginx останется работать и будет раздавать ReDoc из папки `docs/`.
+
+Чтобы остановить сервисы, нажмите `Ctrl+C`, затем выполните:
+
+```bash
+docker compose down
+```
+
+Страница ReDoc подключает JavaScript с CDN jsDelivr, поэтому браузеру нужен
+доступ в интернет для её первого отображения.
+
+## API и дополнительные материалы
 
 - OpenAPI: [`docs/openapi-schema.yml`](docs/openapi-schema.yml)
-- Redoc после запуска nginx: <http://localhost/api/docs/>
-- Коллекция для Postman: [`postman_collection/foodgram.postman_collection.json`](postman_collection/foodgram.postman_collection.json)
+- ReDoc через `infra`: <http://localhost/api/docs/>
+- Postman-коллекция:
+  [`postman_collection/foodgram.postman_collection.json`](postman_collection/foodgram.postman_collection.json)
 
-Основные маршруты API:
+Основные маршруты:
 
 | Маршрут | Назначение |
 | --- | --- |
@@ -82,19 +128,6 @@ API будет доступен по адресу <http://127.0.0.1:8000/api/>.
 | `/api/ingredients/` | ингредиенты и поиск |
 | `/api/recipes/` | рецепты |
 
-Полное описание всех эндпоинтов доступно в ReDoc.
-
-## Структура проекта
-
-```text
-backend/              Django-проект и приложения api, recipes, users
-frontend/             React-клиент
-data/                 исходные данные ингредиентов
-docs/                 OpenAPI-спецификация и Redoc
-infra/                nginx и Docker Compose
-postman_collection/   коллекция запросов Postman
-```
-
 ## Автор
 
 Проект выполнен в рамках курса **Яндекс Практикум**.
@@ -103,4 +136,5 @@ postman_collection/   коллекция запросов Postman
 |------|--------|
 | Backend Developer | [Torb7](https://github.com/Torb7) |
 
-## Адрес сервера: edagram.sytes.net
+## Адрес сайта: [edagram.sytes.net](https://edagram.sytes.net)
+
