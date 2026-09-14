@@ -172,11 +172,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         return queryset.user_annotations(self.request.user)
 
-    def partial_update(self, request, *args, **kwargs):
-        kwargs['partial'] = False
-
-        return self.update(request, *args, **kwargs)
-
     def add_to(self, model, user, pk, place):
         recipe = get_object_or_404(Recipe, pk=pk)
 

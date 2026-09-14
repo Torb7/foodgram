@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.db.transaction import atomic
 from rest_framework import serializers
 
+from recipes.constants import REQUIRED_PATCH_FIELDS
 from recipes.models import Recipe, Tag, Ingredient, RecipeIngredients
 from .fields import Base64ImageField
 
@@ -161,11 +162,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             'tags',
         )
 
-    # Не понимаю тут твоих замечаний: поля tags, ingredients имеют по умолчанию
-    # required=True, зачем дублировать работу DRF в методе validate? А вот поле
-    # image имеет required=False, потому, что при PATCH запросе поле не
-    # обязательное, а при POST обязательное и я его не могу валидировать в
-    # методе validate_image.
     def validate_tags(self, value):
         if len(value) != len(set(value)):
             raise serializers.ValidationError(
@@ -188,6 +184,15 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         if self.instance is None and 'image' not in attrs:
             raise serializers.ValidationError(
                 {'image': 'Изображение обязательно.'}
+            )
+
+        missing_fields = REQUIRED_PATCH_FIELDS.keys() - attrs.keys()
+        if missing_fields:
+            raise serializers.ValidationError(
+                {
+                    field: REQUIRED_PATCH_FIELDS[field]
+                    for field in missing_fields
+                }
             )
 
         return attrs

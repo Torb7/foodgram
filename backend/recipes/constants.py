@@ -15,3 +15,11 @@ MIN_COOKING_TIME = 1
 MAX_COOKING_TIME = 3000
 MIN_AMOUNT_INGREDIENT = 1
 MAX_AMOUNT_INGREDIENT = 30000
+
+REQUIRED_PATCH_FIELDS = {
+    'name': 'Название обязательно.',
+    'text': 'Описание обязательно.',
+    'cooking_time': 'Время приготовления обязательно.',
+    'tags': 'Теги обязательны.',
+    'ingredients': 'Ингридиенты обязательны.',
+}
