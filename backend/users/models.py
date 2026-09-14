@@ -100,20 +100,25 @@ class Follow(models.Model):
         return 'Подписан на'
 
 
-class Favorites(models.Model):
+class UserRecipeRelation(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='favorites_user',
+        related_name='%(class)s_user',
         verbose_name='Пользователь',
     )
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
-        related_name='favorites_recipe',
+        related_name='%(class)s_recipe',
         verbose_name='Рецепт',
     )
 
+    class Meta:
+        abstract = True
+
+
+class Favorites(UserRecipeRelation):
     class Meta:
         verbose_name = 'Избранный рецепт'
         verbose_name_plural = 'Избранные рецепты'
@@ -128,20 +133,7 @@ class Favorites(models.Model):
         return f'Рецепт в избранном у {self.user.email}'
 
 
-class ShoppingCart(models.Model):
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='shopping_cart_user',
-        verbose_name='Пользователь',
-    )
-    recipe = models.ForeignKey(
-        Recipe,
-        on_delete=models.CASCADE,
-        related_name='shopping_cart_recipe',
-        verbose_name='Рецепт',
-    )
-
+class ShoppingCart(UserRecipeRelation):
     class Meta:
         verbose_name = 'Корзина покупок'
         verbose_name_plural = 'Корзина покупок'
@@ -153,6 +145,4 @@ class ShoppingCart(models.Model):
         ]
 
     def __str__(self):
-        return (
-            f'Рецепт в корзине покупок у {self.user.email}'
-        )
+        return f'Рецепт в корзине покупок у {self.user.email}'
