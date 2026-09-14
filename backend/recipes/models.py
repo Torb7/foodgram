@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django.db import models, IntegrityError, transaction
+from django.db import models, IntegrityError
 from nanoid import generate
 
 from .managers import RecipeQuerySet
@@ -109,9 +109,8 @@ class Recipe(models.Model):
             self.short_code = generate(size=5)
 
             try:
-                with transaction.atomic():
-                    super().save(*args, **kwargs)
-                    return
+                super().save(*args, **kwargs)
+                return
 
             except IntegrityError:
                 self.short_code = None
