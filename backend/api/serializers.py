@@ -219,10 +219,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
         recipe.tags.set(tags)
 
-        # recipe.recipe_ingredients.clear() - AttributeError: 'RelatedManager'
-        # object has no attribute 'clear'
-        # Видимо clear нельзя использовать для своих промежуточных моделей
-        recipe.recipe_ingredients.all().delete()
+        recipe.ingredients.clear()
 
         self.bulk_create_ingredients(recipe, ingredients)
 
