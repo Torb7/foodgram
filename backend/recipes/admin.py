@@ -4,40 +4,31 @@ from django.db.models import Count
 from .models import Recipe, RecipeIngredients, Tag, Ingredient
 
 
+class RecipesCountMixin:
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .annotate(recipes_count=Count('recipes'))
+        )
+
+    @admin.display(description='Количество рецептов')
+    def recipes_count(self, obj):
+        return obj.recipes_count
+
+
 @admin.register(Tag)
-class TagAdmin(admin.ModelAdmin):
+class TagAdmin(RecipesCountMixin, admin.ModelAdmin):
     list_display = ('name', 'slug', 'recipes_count')
     search_fields = ('name', 'slug')
     readonly_fields = ('recipes_count',)
 
-    def get_queryset(self, request):
-        return (
-            super()
-            .get_queryset(request)
-            .annotate(recipes_count=Count('recipes'))
-        )
-
-    @admin.display(description='Количество рецептов с этим тегом')
-    def recipes_count(self, obj):
-        return obj.recipes_count
-
 
 @admin.register(Ingredient)
-class IngredientAdmin(admin.ModelAdmin):
+class IngredientAdmin(RecipesCountMixin, admin.ModelAdmin):
     list_display = ('name', 'measurement_unit', 'recipes_count')
     search_fields = ('name',)
     readonly_fields = ('recipes_count',)
-
-    def get_queryset(self, request):
-        return (
-            super()
-            .get_queryset(request)
-            .annotate(recipes_count=Count('recipes'))
-        )
-
-    @admin.display(description='Количество рецептов с этим ингридиентом')
-    def recipes_count(self, obj):
-        return obj.recipes_count
 
 
 class IngredientInline(admin.StackedInline):
