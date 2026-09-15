@@ -163,14 +163,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return RecipeCreateSerializer
 
     def get_queryset(self):
-        queryset = Recipe.objects.select_related('author').prefetch_related(
-            'tags', 'recipe_ingredients__ingredient'
+        return (
+            Recipe.objects.select_related('author')
+            .prefetch_related('tags', 'recipe_ingredients__ingredient')
+            .user_annotations(self.request.user)
         )
-
-        if not self.request.user.is_authenticated:
-            return queryset
-
-        return queryset.user_annotations(self.request.user)
 
     def add_to(self, model, user, pk, place):
         recipe = get_object_or_404(Recipe, pk=pk)
