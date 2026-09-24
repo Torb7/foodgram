@@ -15,6 +15,24 @@ def user(django_user_model, user_password):
 
 
 @pytest.fixture
+def another_user(django_user_model, user_password):
+    return django_user_model.objects.create_user(
+        username='another_user',
+        email='another_user@yandex.ru',
+        first_name='Test',
+        last_name='Test',
+        password=user_password,
+    )
+
+
+@pytest.fixture
+def subscribed_user(user, another_user):
+    user.following.add(another_user)
+
+    return user
+
+
+@pytest.fixture
 def user_password():
     return 'testpassword123'
 
@@ -60,3 +78,42 @@ def logout_url():
 @pytest.fixture
 def signup_url():
     return reverse('users-list')
+
+
+@pytest.fixture
+def users_url():
+    return reverse('users-list')
+
+
+@pytest.fixture
+def users_detail_url(user):
+    return reverse('users-detail', args=(user.pk,))
+
+
+@pytest.fixture
+def users_me_url():
+    return reverse('users-me')
+
+
+@pytest.fixture
+def avatar_url():
+    return reverse('users-avatar')
+
+
+@pytest.fixture
+def avatar_image():
+    return (
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAgMAAABieywa'
+        'AAAACVBMVEUAAAD///9fX1/S0ecCAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAACklEQVQIm'
+        'WNoAAAAggCByxOyYQAAAABJRU5ErkJggg=='
+    )
+
+
+@pytest.fixture
+def subscriptions_url():
+    return reverse('users-subscriptions')
+
+
+@pytest.fixture
+def subscribe_url(another_user):
+    return reverse('users-subscribe', args=(another_user.pk,))
