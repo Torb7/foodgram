@@ -77,6 +77,24 @@ API станет доступен по адресу <http://127.0.0.1:8000/api/>
 | `ALLOWED_HOSTS` | допустимые хосты, через запятую | `localhost,127.0.0.1` |
 | `CSRF_TRUSTED_ORIGINS` | доверенные источники CSRF, через запятую | `http://localhost:8000` |
 
+## API и дополнительные материалы
+
+- OpenAPI: [`docs/openapi-schema.yml`](docs/openapi-schema.yml)
+- ReDoc через `infra`: <http://localhost/api/docs/>
+- Postman-коллекция:
+  [`postman_collection/foodgram.postman_collection.json`](postman_collection/foodgram.postman_collection.json)
+
+Основные маршруты:
+
+| Маршрут | Назначение |
+| --- | --- |
+| `/api/auth/token/login/` | получить токен |
+| `/api/users/` | пользователи и регистрация |
+| `/api/users/subscriptions/` | подписки текущего пользователя |
+| `/api/tags/` | теги |
+| `/api/ingredients/` | ингредиенты и поиск |
+| `/api/recipes/` | рецепты |
+
 ## Запуск ReDoc из `infra`
 
 Этот способ предназначен для просмотра frontend-сборки и API-документации.
@@ -110,23 +128,39 @@ docker compose down
 Страница ReDoc подключает JavaScript с CDN jsDelivr, поэтому браузеру нужен
 доступ в интернет для её первого отображения.
 
-## API и дополнительные материалы
+## Тесты
 
-- OpenAPI: [`docs/openapi-schema.yml`](docs/openapi-schema.yml)
-- ReDoc через `infra`: <http://localhost/api/docs/>
-- Postman-коллекция:
-  [`postman_collection/foodgram.postman_collection.json`](postman_collection/foodgram.postman_collection.json)
+Автоматические API-тесты написаны на `pytest` и находятся в
+[`backend/tests/`](backend/tests/). Они проверяют:
 
-Основные маршруты:
+- регистрацию, вход, выход и смену пароля;
+- профили пользователей, аватары и подписки;
+- получение и поиск ингредиентов, а также получение тегов;
+- создание, просмотр, редактирование и удаление рецептов;
+- валидацию обязательных полей и защиту от повторного добавления тегов,
+  ингредиентов, избранного и списка покупок;
+- фильтрацию, пагинацию, избранное и список покупок.
 
-| Маршрут | Назначение |
-| --- | --- |
-| `/api/auth/token/login/` | получить токен |
-| `/api/users/` | пользователи и регистрация |
-| `/api/users/subscriptions/` | подписки текущего пользователя |
-| `/api/tags/` | теги |
-| `/api/ingredients/` | ингредиенты и поиск |
-| `/api/recipes/` | рецепты |
+Чтобы запустить тесты из активированного виртуального окружения, выполните из
+корня репозитория:
+
+```bash
+cd backend
+pytest
+```
+
+## CI/CD
+
+При каждом `push` в ветку `main` workflow
+[`main.yml`](.github/workflows/main.yml) в GitHub Actions:
+
+1. запускает проверку стиля `flake8` и API-тесты `pytest`;
+2. собирает и публикует Docker-образы backend, frontend и nginx в Docker Hub;
+3. развёртывает проект на удалённом сервере через
+   `docker-compose.production.yml`, выполняет миграции и собирает статику.
+
+Для работы workflow в репозитории должны быть настроены секреты GitHub:
+`DOCKER_USERNAME`, `DOCKER_PASSWORD`, `HOST`, `USER` и `SSH_KEY`.
 
 ## Автор
 
@@ -137,4 +171,3 @@ docker compose down
 | Backend Developer | [Torb7](https://github.com/Torb7) |
 
 ## Адрес сайта: [edagram.sytes.net](https://edagram.sytes.net)
-
