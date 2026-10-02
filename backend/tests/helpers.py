@@ -67,3 +67,15 @@ def assert_recipe_ids(data, recipes_for_filters):
     returned_ids = {recipe['id'] for recipe in data['results']}
     expected_ids = {recipes_for_filters[0].id, recipes_for_filters[1].id}
     assert returned_ids == expected_ids
+
+
+def assert_ingredient_response_data(data, ingredient):
+    assert data['id'] == ingredient.id
+    assert data['name'] == ingredient.name
+    assert data['measurement_unit'] == ingredient.measurement_unit
+
+
+def assert_tag_response_data(data, tag):
+    assert data['id'] == tag.id
+    assert data['name'] == tag.name
+    assert data['slug'] == tag.slug

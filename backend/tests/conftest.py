@@ -312,3 +312,23 @@ def recipes_favorite_url(recipe):
 @pytest.fixture
 def recipes_shopping_cart_url(recipe):
     return reverse('recipes-shopping-cart', args=(recipe.pk,))
+
+
+@pytest.fixture
+def ingredients_url():
+    return reverse('ingredients-list')
+
+
+@pytest.fixture
+def ingredients_detail_url(ingredients):
+    return reverse('ingredients-detail', args=(ingredients[0].pk,))
+
+
+@pytest.fixture
+def tags_url():
+    return reverse('tags-list')
+
+
+@pytest.fixture
+def tags_detail_url(tags):
+    return reverse('tags-detail', args=(tags[0].pk,))
